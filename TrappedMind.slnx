@@ -1,0 +1,4 @@
+<Solution>
+  <Project Path="TrappedMind.Tests/TrappedMind.Tests.csproj" />
+  <Project Path="TrappedMind/TrappedMind.csproj" />
+</Solution>
