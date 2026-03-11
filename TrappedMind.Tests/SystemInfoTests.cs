@@ -89,4 +89,31 @@ public class SystemInfoTests
         Assert.Equal("2h 30m", SystemInfo.FormatUptime(9000));
         Assert.Equal("1d 3h 15m", SystemInfo.FormatUptime(98100));
     }
+
+    [Fact]
+    public void ParseFanSpeed_Valid_ReturnsRpm()
+    {
+        Assert.Equal(2100, SystemInfo.ParseFanSpeed("2100\n"));
+    }
+
+    [Fact]
+    public void ParseFanSpeed_Invalid_ReturnsNull()
+    {
+        Assert.Null(SystemInfo.ParseFanSpeed(""));
+        Assert.Null(SystemInfo.ParseFanSpeed("not a number"));
+    }
+
+    [Fact]
+    public void ParseFanSpeed_Zero_ReturnsNull()
+    {
+        Assert.Null(SystemInfo.ParseFanSpeed("0"));
+    }
+
+    [Fact]
+    public void GetIpAddresses_ReturnsNonLoopback()
+    {
+        var ips = SystemInfo.GetIpAddresses();
+        Assert.IsType<Dictionary<string, string>>(ips);
+        Assert.DoesNotContain(ips, kv => kv.Value == "127.0.0.1");
+    }
 }

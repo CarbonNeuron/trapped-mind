@@ -9,7 +9,9 @@ public record SystemStats(
     double? CpuUsage,
     double? RamUsedGb,
     double? RamTotalGb,
-    double? UptimeSeconds);
+    double? UptimeSeconds,
+    int? FanSpeedRpm,
+    Dictionary<string, string> IpAddresses);
 
 public class SystemInfo
 {
@@ -107,6 +109,40 @@ public class SystemInfo
         return $"{ts.Hours}h {ts.Minutes}m";
     }
 
+    public static int? ParseFanSpeed(string content)
+    {
+        if (int.TryParse(content.Trim(), out var rpm) && rpm > 0)
+            return rpm;
+        return null;
+    }
+
+    public static Dictionary<string, string> GetIpAddresses()
+    {
+        var result = new Dictionary<string, string>();
+        try
+        {
+            foreach (var iface in System.Net.NetworkInformation.NetworkInterface.GetAllNetworkInterfaces())
+            {
+                if (iface.OperationalStatus != System.Net.NetworkInformation.OperationalStatus.Up)
+                    continue;
+                if (iface.NetworkInterfaceType == System.Net.NetworkInformation.NetworkInterfaceType.Loopback)
+                    continue;
+
+                var props = iface.GetIPProperties();
+                foreach (var addr in props.UnicastAddresses)
+                {
+                    if (addr.Address.AddressFamily == System.Net.Sockets.AddressFamily.InterNetwork)
+                    {
+                        result[iface.Name] = addr.Address.ToString();
+                        break;
+                    }
+                }
+            }
+        }
+        catch { }
+        return result;
+    }
+
     private static string? ReadFileSafe(string path)
     {
         try { return File.ReadAllText(path); }
@@ -132,6 +168,22 @@ public class SystemInfo
             _hasPrev = true;
         }
 
-        return new SystemStats(temp, batCap, batStatus, cpuUsage, ramUsed, ramTotal, uptime);
+        int? fanSpeed = null;
+        var hwmonDirs = Directory.Exists("/sys/class/hwmon")
+            ? Directory.GetDirectories("/sys/class/hwmon")
+            : Array.Empty<string>();
+        foreach (var dir in hwmonDirs)
+        {
+            var fanPath = Path.Combine(dir, "fan1_input");
+            if (ReadFileSafe(fanPath) is { } f)
+            {
+                fanSpeed = ParseFanSpeed(f);
+                if (fanSpeed != null) break;
+            }
+        }
+
+        var ipAddresses = GetIpAddresses();
+
+        return new SystemStats(temp, batCap, batStatus, cpuUsage, ramUsed, ramTotal, uptime, fanSpeed, ipAddresses);
     }
 }

@@ -7,91 +7,91 @@ public class MoodEngineTests
     [Fact]
     public void GetPetMood_HotCpu_ReturnsHot()
     {
-        var stats = new SystemStats(75, 50, "Discharging", 30, 4, 8, 1000);
+        var stats = new SystemStats(75, 50, "Discharging", 30, 4, 8, 1000, null, new Dictionary<string, string>());
         Assert.Equal(PetMood.Hot, MoodEngine.GetPetMood(stats));
     }
 
     [Fact]
     public void GetPetMood_HighCpu_ReturnsPanicking()
     {
-        var stats = new SystemStats(60, 50, "Discharging", 85, 4, 8, 1000);
+        var stats = new SystemStats(60, 50, "Discharging", 85, 4, 8, 1000, null, new Dictionary<string, string>());
         Assert.Equal(PetMood.HighCpu, MoodEngine.GetPetMood(stats));
     }
 
     [Fact]
     public void GetPetMood_LowBattery_ReturnsSleepy()
     {
-        var stats = new SystemStats(50, 15, "Discharging", 30, 4, 8, 1000);
+        var stats = new SystemStats(50, 15, "Discharging", 30, 4, 8, 1000, null, new Dictionary<string, string>());
         Assert.Equal(PetMood.LowBattery, MoodEngine.GetPetMood(stats));
     }
 
     [Fact]
     public void GetPetMood_Charging_ReturnsHappy()
     {
-        var stats = new SystemStats(50, 50, "Charging", 30, 4, 8, 1000);
+        var stats = new SystemStats(50, 50, "Charging", 30, 4, 8, 1000, null, new Dictionary<string, string>());
         Assert.Equal(PetMood.Charging, MoodEngine.GetPetMood(stats));
     }
 
     [Fact]
     public void GetPetMood_Normal_ReturnsCalm()
     {
-        var stats = new SystemStats(50, 50, "Discharging", 30, 4, 8, 1000);
+        var stats = new SystemStats(50, 50, "Discharging", 30, 4, 8, 1000, null, new Dictionary<string, string>());
         Assert.Equal(PetMood.Normal, MoodEngine.GetPetMood(stats));
     }
 
     [Fact]
     public void GetPetMood_HotOverridesHighCpu()
     {
-        var stats = new SystemStats(75, 50, "Discharging", 90, 4, 8, 1000);
+        var stats = new SystemStats(75, 50, "Discharging", 90, 4, 8, 1000, null, new Dictionary<string, string>());
         Assert.Equal(PetMood.Hot, MoodEngine.GetPetMood(stats));
     }
 
     [Fact]
     public void GetPetMood_NullStats_ReturnsNormal()
     {
-        var stats = new SystemStats(null, null, null, null, null, null, null);
+        var stats = new SystemStats(null, null, null, null, null, null, null, null, new Dictionary<string, string>());
         Assert.Equal(PetMood.Normal, MoodEngine.GetPetMood(stats));
     }
 
     [Fact]
     public void GetPanelColor_VeryHot_ReturnsRed()
     {
-        var stats = new SystemStats(85, 50, "Discharging", 30, 4, 8, 1000);
+        var stats = new SystemStats(85, 50, "Discharging", 30, 4, 8, 1000, null, new Dictionary<string, string>());
         Assert.Equal(Color.Red, MoodEngine.GetPanelColor(stats));
     }
 
     [Fact]
     public void GetPanelColor_Hot_ReturnsOrange()
     {
-        var stats = new SystemStats(75, 50, "Discharging", 30, 4, 8, 1000);
+        var stats = new SystemStats(75, 50, "Discharging", 30, 4, 8, 1000, null, new Dictionary<string, string>());
         Assert.Equal(Color.Orange1, MoodEngine.GetPanelColor(stats));
     }
 
     [Fact]
     public void GetPanelColor_VeryLowBattery_ReturnsRed()
     {
-        var stats = new SystemStats(50, 10, "Discharging", 30, 4, 8, 1000);
+        var stats = new SystemStats(50, 10, "Discharging", 30, 4, 8, 1000, null, new Dictionary<string, string>());
         Assert.Equal(Color.Red, MoodEngine.GetPanelColor(stats));
     }
 
     [Fact]
     public void GetPanelColor_LowBattery_ReturnsYellow()
     {
-        var stats = new SystemStats(50, 25, "Discharging", 30, 4, 8, 1000);
+        var stats = new SystemStats(50, 25, "Discharging", 30, 4, 8, 1000, null, new Dictionary<string, string>());
         Assert.Equal(Color.Yellow, MoodEngine.GetPanelColor(stats));
     }
 
     [Fact]
     public void GetPanelColor_Charging_ReturnsGreen()
     {
-        var stats = new SystemStats(50, 50, "Charging", 30, 4, 8, 1000);
+        var stats = new SystemStats(50, 50, "Charging", 30, 4, 8, 1000, null, new Dictionary<string, string>());
         Assert.Equal(Color.Green, MoodEngine.GetPanelColor(stats));
     }
 
     [Fact]
     public void GetPanelColor_Default_ReturnsBlue()
     {
-        var stats = new SystemStats(50, 50, "Discharging", 30, 4, 8, 1000);
+        var stats = new SystemStats(50, 50, "Discharging", 30, 4, 8, 1000, null, new Dictionary<string, string>());
         Assert.Equal(Color.Blue, MoodEngine.GetPanelColor(stats));
     }
 
