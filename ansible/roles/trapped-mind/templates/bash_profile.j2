@@ -1,4 +1,4 @@
 # Auto-launch cage + foot on tty1
 if [ "$(tty)" = "/dev/tty1" ]; then
-    exec cage -- foot --config /home/{{ app_user }}/.config/foot/foot.ini -e bash -c "cd {{ app_dir }} && exec dotnet run --project TrappedMind"
+    exec cage -- foot --config /home/{{ app_user }}/.config/foot/foot.ini -e {{ app_dir }}/TrappedMind/bin/Debug/net10.0/TrappedMind
 fi
