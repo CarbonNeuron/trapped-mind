@@ -95,8 +95,22 @@ public class ChatView : View
         if (string.IsNullOrEmpty(text))
             return 3;
 
-        var lines = TextFormatter.WordWrapText(text, innerWidth);
-        return Math.Max(3, lines.Count + 2);
+        // WordWrapText strips newlines, but the Label preserves them.
+        // Wrap each paragraph separately and sum the lines.
+        var totalLines = 0;
+        foreach (var paragraph in text.Split('\n'))
+        {
+            if (string.IsNullOrEmpty(paragraph))
+            {
+                totalLines++;
+                continue;
+            }
+
+            var wrapped = TextFormatter.WordWrapText(paragraph, innerWidth);
+            totalLines += Math.Max(1, wrapped.Count);
+        }
+
+        return Math.Max(3, totalLines + 2);
     }
 }
 
