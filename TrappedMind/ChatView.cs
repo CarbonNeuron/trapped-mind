@@ -1,6 +1,5 @@
 using System.Globalization;
 using Terminal.Gui;
-using Size = System.Drawing.Size;
 using Point = System.Drawing.Point;
 
 namespace TrappedMind;
@@ -9,7 +8,6 @@ public class ChatView : View
 {
     private readonly List<MessageCard> _cards = new();
     private MessageCard? _streamingCard;
-    private int _totalHeight;
 
     public ChatView()
     {
@@ -19,20 +17,20 @@ public class ChatView : View
 
     public void AddMessage(ChatMessage message)
     {
-        var card = new MessageCard(message, AvailableWidth);
+        var card = CreateCard(message);
         _cards.Add(card);
         Add(card);
-        LayoutCards();
+        PositionCard(card);
         ScrollToBottom();
     }
 
     public void BeginStreaming()
     {
         var placeholder = new ChatMessage(DateTime.Now, "...", MessageSource.Ai);
-        _streamingCard = new MessageCard(placeholder, AvailableWidth);
+        _streamingCard = CreateCard(placeholder);
         _cards.Add(_streamingCard);
         Add(_streamingCard);
-        LayoutCards();
+        PositionCard(_streamingCard);
         ScrollToBottom();
     }
 
@@ -40,41 +38,48 @@ public class ChatView : View
     {
         if (_streamingCard is null) return;
 
-        _streamingCard.UpdateText(partialText, AvailableWidth);
-        LayoutCards();
+        _streamingCard.UpdateText(partialText);
         ScrollToBottom();
     }
 
-    private int AvailableWidth => Math.Max(10, Viewport.Width);
-
-    private void LayoutCards()
+    private MessageCard CreateCard(ChatMessage message)
     {
-        int y = 0;
-        foreach (var card in _cards)
+        return new MessageCard(message)
         {
-            card.X = 0;
-            card.Y = y;
-            card.Width = Dim.Fill();
-            card.Height = card.ComputedHeight;
-            y += card.ComputedHeight + 1; // +1 gap between messages
-        }
+            X = 0,
+            Width = Dim.Fill(),
+            Height = Dim.Auto(DimAutoStyle.Content),
+        };
+    }
 
-        _totalHeight = y;
-        SetContentSize(new Size(Viewport.Width, _totalHeight));
+    private void PositionCard(MessageCard card)
+    {
+        var idx = _cards.IndexOf(card);
+        card.Y = idx == 0
+            ? 0
+            : Pos.Bottom(_cards[idx - 1]) + 1;
     }
 
     private void ScrollToBottom()
     {
-        var viewportHeight = Viewport.Height;
-        if (_totalHeight > viewportHeight)
-        {
-            Viewport = Viewport with
-            {
-                Location = new Point(0, _totalHeight - viewportHeight)
-            };
-        }
-
         SetNeedsDraw();
+
+        // Defer scroll until after layout so content size is computed
+        Application.AddIdle(() =>
+        {
+            var contentHeight = GetContentSize().Height;
+            var viewportHeight = Viewport.Height;
+            if (contentHeight > viewportHeight)
+            {
+                Viewport = Viewport with
+                {
+                    Location = new Point(0, contentHeight - viewportHeight)
+                };
+            }
+
+            SetNeedsDraw();
+            return false; // run once
+        });
     }
 }
 
@@ -82,9 +87,8 @@ internal class MessageCard : FrameView
 {
     private readonly Label _textLabel;
     private readonly bool _isUser;
-    public int ComputedHeight { get; private set; }
 
-    public MessageCard(ChatMessage message, int availableWidth)
+    public MessageCard(ChatMessage message)
     {
         _isUser = message.Source == MessageSource.User;
 
@@ -116,24 +120,12 @@ internal class MessageCard : FrameView
         };
 
         Add(_textLabel);
-        ComputeHeight(availableWidth);
     }
 
-    public void UpdateText(string text, int availableWidth)
+    public void UpdateText(string text)
     {
         _textLabel.Text = text;
         Title = DateTime.Now.ToString("MMM d h:mm tt", CultureInfo.InvariantCulture);
-        ComputeHeight(availableWidth);
-    }
-
-    private void ComputeHeight(int availableWidth)
-    {
-        // FrameView border takes 2 columns (left + right)
-        var innerWidth = Math.Max(1, availableWidth - 2);
-        var lines = TextFormatter.WordWrapText(
-            _textLabel.Text ?? "", innerWidth);
-        // Height = border top + text lines + border bottom
-        ComputedHeight = Math.Max(3, lines.Count + 2);
-        Height = ComputedHeight;
+        SetNeedsDraw();
     }
 }

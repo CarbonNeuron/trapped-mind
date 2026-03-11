@@ -14,9 +14,26 @@ var renderer = new Renderer();
 var inputLock = new object();
 string? pendingUserMessage = null;
 var holdCts = CancellationTokenSource.CreateLinkedTokenSource(cts.Token);
+var commandHandler = new CommandHandler();
 
 renderer.OnUserInput(msg =>
 {
+    if (commandHandler.IsCommand(msg))
+    {
+        // Show the command in chat
+        var cmdMsg = new ChatMessage(DateTime.Now, msg, MessageSource.User);
+        renderer.AddChatMessage(cmdMsg);
+
+        // Run command in background, show result in chat
+        _ = Task.Run(async () =>
+        {
+            var result = await commandHandler.ExecuteAsync(msg, cts.Token);
+            var resultMsg = new ChatMessage(DateTime.Now, result, MessageSource.Ai);
+            Application.Invoke(() => renderer.AddChatMessage(resultMsg));
+        });
+        return;
+    }
+
     var chatMsg = new ChatMessage(DateTime.Now, msg, MessageSource.User);
     history.AppendMessage(chatMsg);
     renderer.AddChatMessage(chatMsg);

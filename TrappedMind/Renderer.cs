@@ -34,9 +34,21 @@ public class Renderer
             Height = Dim.Fill(1),
         };
 
+        var inputPrompt = new Label
+        {
+            Text = "> ",
+            X = 0,
+            Y = Pos.AnchorEnd(1),
+            Width = 2,
+            ColorScheme = new ColorScheme
+            {
+                Normal = new Terminal.Gui.Attribute(Color.Green, Color.Black),
+            },
+        };
+
         _inputField = new TextField
         {
-            X = 0,
+            X = 2,
             Y = Pos.AnchorEnd(1),
             Width = Dim.Fill(),
             Text = "",
@@ -52,7 +64,7 @@ public class Renderer
             e.Cancel = true;
         };
 
-        _chatFrame.Add(_chatView, _inputField);
+        _chatFrame.Add(_chatView, inputPrompt, _inputField);
 
         // Right top: pet
         _petFrame = new FrameView
