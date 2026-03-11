@@ -1,72 +1,109 @@
+using System.Text.Json;
+
 namespace TrappedMind.Tests;
 
 public class HistoryManagerTests : IDisposable
 {
-    private readonly string _tempFile;
+    private readonly string _tempDir;
 
     public HistoryManagerTests()
     {
-        _tempFile = Path.GetTempFileName();
+        _tempDir = Path.Combine(Path.GetTempPath(), "trapped_test_" + Guid.NewGuid());
+        Directory.CreateDirectory(_tempDir);
     }
 
-    public void Dispose() => File.Delete(_tempFile);
-
-    [Fact]
-    public void GetLastThoughts_EmptyFile_ReturnsEmpty()
+    public void Dispose()
     {
-        File.WriteAllText(_tempFile, "");
-        var mgr = new HistoryManager(_tempFile, 50);
-        Assert.Empty(mgr.GetLastThoughts(5));
+        if (Directory.Exists(_tempDir))
+            Directory.Delete(_tempDir, true);
     }
 
     [Fact]
-    public void GetLastThoughts_FewerThanN_ReturnsAll()
+    public void AppendMessage_CreatesTodayFile()
     {
-        File.WriteAllLines(_tempFile, new[] { "thought1", "thought2" });
-        var mgr = new HistoryManager(_tempFile, 50);
+        var mgr = new HistoryManager(_tempDir, 10L * 1024 * 1024 * 1024);
+        var msg = new ChatMessage(new DateTime(2026, 3, 11, 14, 30, 0), "hello", MessageSource.Ai);
+        mgr.AppendMessage(msg);
+
+        var file = Path.Combine(_tempDir, "2026-03-11.jsonl");
+        Assert.True(File.Exists(file));
+        var line = File.ReadAllLines(file).Single();
+        var parsed = JsonSerializer.Deserialize<ChatMessage>(line);
+        Assert.Equal("hello", parsed!.Text);
+        Assert.Equal(MessageSource.Ai, parsed.Source);
+    }
+
+    [Fact]
+    public void AppendMessage_AppendsToExistingFile()
+    {
+        var mgr = new HistoryManager(_tempDir, 10L * 1024 * 1024 * 1024);
+        var msg1 = new ChatMessage(new DateTime(2026, 3, 11, 14, 30, 0), "first", MessageSource.Ai);
+        var msg2 = new ChatMessage(new DateTime(2026, 3, 11, 14, 31, 0), "second", MessageSource.User);
+        mgr.AppendMessage(msg1);
+        mgr.AppendMessage(msg2);
+
+        var file = Path.Combine(_tempDir, "2026-03-11.jsonl");
+        var lines = File.ReadAllLines(file);
+        Assert.Equal(2, lines.Length);
+    }
+
+    [Fact]
+    public void LoadAllMessages_ReturnsChronological()
+    {
+        var day1 = Path.Combine(_tempDir, "2026-03-10.jsonl");
+        var day2 = Path.Combine(_tempDir, "2026-03-11.jsonl");
+        var msg1 = new ChatMessage(new DateTime(2026, 3, 10, 9, 0, 0), "old", MessageSource.Ai);
+        var msg2 = new ChatMessage(new DateTime(2026, 3, 11, 10, 0, 0), "new", MessageSource.Ai);
+        File.WriteAllText(day1, JsonSerializer.Serialize(msg1) + "\n");
+        File.WriteAllText(day2, JsonSerializer.Serialize(msg2) + "\n");
+
+        var mgr = new HistoryManager(_tempDir, 10L * 1024 * 1024 * 1024);
+        var messages = mgr.LoadAllMessages();
+        Assert.Equal(2, messages.Count);
+        Assert.Equal("old", messages[0].Text);
+        Assert.Equal("new", messages[1].Text);
+    }
+
+    [Fact]
+    public void LoadAllMessages_EmptyDir_ReturnsEmpty()
+    {
+        var mgr = new HistoryManager(_tempDir, 10L * 1024 * 1024 * 1024);
+        Assert.Empty(mgr.LoadAllMessages());
+    }
+
+    [Fact]
+    public void GetLastThoughts_ReturnsOnlyAiMessages()
+    {
+        var mgr = new HistoryManager(_tempDir, 10L * 1024 * 1024 * 1024);
+        mgr.AppendMessage(new ChatMessage(new DateTime(2026, 3, 11, 10, 0, 0), "ai1", MessageSource.Ai));
+        mgr.AppendMessage(new ChatMessage(new DateTime(2026, 3, 11, 10, 1, 0), "user1", MessageSource.User));
+        mgr.AppendMessage(new ChatMessage(new DateTime(2026, 3, 11, 10, 2, 0), "ai2", MessageSource.Ai));
+
         var thoughts = mgr.GetLastThoughts(5);
         Assert.Equal(2, thoughts.Count);
-        Assert.Equal("thought1", thoughts[0]);
+        Assert.Equal("ai1", thoughts[0]);
+        Assert.Equal("ai2", thoughts[1]);
     }
 
     [Fact]
-    public void GetLastThoughts_MoreThanN_ReturnsLastN()
+    public void TruncateIfNeeded_DeletesOldestFiles()
     {
-        File.WriteAllLines(_tempFile, new[] { "a", "b", "c", "d", "e", "f" });
-        var mgr = new HistoryManager(_tempFile, 50);
-        var thoughts = mgr.GetLastThoughts(3);
-        Assert.Equal(3, thoughts.Count);
-        Assert.Equal("d", thoughts[0]);
-        Assert.Equal("f", thoughts[2]);
+        var day1 = Path.Combine(_tempDir, "2026-03-01.jsonl");
+        var day2 = Path.Combine(_tempDir, "2026-03-02.jsonl");
+        File.WriteAllText(day1, new string('x', 600));
+        File.WriteAllText(day2, new string('y', 600));
+
+        var mgr = new HistoryManager(_tempDir, 800);
+        mgr.TruncateIfNeeded();
+
+        Assert.False(File.Exists(day1));
+        Assert.True(File.Exists(day2));
     }
 
     [Fact]
-    public void AppendThought_AddsLine()
+    public void FormattedTimestamp_CorrectFormat()
     {
-        File.WriteAllText(_tempFile, "");
-        var mgr = new HistoryManager(_tempFile, 50);
-        mgr.AppendThought("hello world");
-        var lines = File.ReadAllLines(_tempFile);
-        Assert.Single(lines);
-        Assert.Equal("hello world", lines[0]);
-    }
-
-    [Fact]
-    public void AppendThought_TrimsWhenOverMax()
-    {
-        File.WriteAllLines(_tempFile, Enumerable.Range(1, 50).Select(i => $"thought{i}"));
-        var mgr = new HistoryManager(_tempFile, 50);
-        mgr.AppendThought("new thought");
-        var lines = File.ReadAllLines(_tempFile);
-        Assert.Equal(50, lines.Length);
-        Assert.Equal("thought2", lines[0]);
-        Assert.Equal("new thought", lines[^1]);
-    }
-
-    [Fact]
-    public void GetLastThoughts_FileDoesNotExist_ReturnsEmpty()
-    {
-        var mgr = new HistoryManager("/tmp/nonexistent_" + Guid.NewGuid(), 50);
-        Assert.Empty(mgr.GetLastThoughts(5));
+        var msg = new ChatMessage(new DateTime(2026, 3, 11, 14, 32, 0), "test", MessageSource.Ai);
+        Assert.Equal("Mar 11 2:32 PM", msg.FormattedTimestamp);
     }
 }

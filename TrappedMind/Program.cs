@@ -12,7 +12,7 @@ var config = Config.Load();
 config.ApplyCliArgs(args);
 
 var sysInfo = new SystemInfo();
-var history = new HistoryManager(config.HistoryPath, config.MaxHistory);
+var history = new HistoryManager(config.HistoryPath, 10L * 1024 * 1024 * 1024);
 using var ollama = new OllamaClient(config.OllamaUrl);
 var renderer = new Renderer();
 
@@ -74,7 +74,7 @@ await AnsiConsole.Live(renderer.Layout)
                     {
                         var thought = tokenBuffer.ToString().Trim();
                         if (!string.IsNullOrEmpty(thought))
-                            history.AppendThought(thought);
+                            history.AppendMessage(new ChatMessage(DateTime.Now, thought, MessageSource.Ai));
                     }
                 }
                 else
@@ -89,7 +89,7 @@ await AnsiConsole.Live(renderer.Layout)
 
                     var thought = tokenBuffer.ToString().Trim();
                     if (!string.IsNullOrEmpty(thought))
-                        history.AppendThought(thought);
+                        history.AppendMessage(new ChatMessage(DateTime.Now, thought, MessageSource.Ai));
                 }
 
                 // Hold phase: animate pet and refresh stats

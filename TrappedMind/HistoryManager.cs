@@ -1,55 +1,80 @@
+using System.Text.Json;
+
 namespace TrappedMind;
 
 public class HistoryManager
 {
-    private readonly string _path;
-    private readonly int _maxLines;
+    private readonly string _directory;
+    private readonly long _maxBytes;
 
-    public HistoryManager(string path, int maxLines)
+    public HistoryManager(string directory, long maxBytes)
     {
-        _path = path;
-        _maxLines = maxLines;
+        _directory = directory;
+        _maxBytes = maxBytes;
+        Directory.CreateDirectory(_directory);
+    }
+
+    public void AppendMessage(ChatMessage message)
+    {
+        var file = Path.Combine(_directory, message.Timestamp.ToString("yyyy-MM-dd") + ".jsonl");
+        var line = JsonSerializer.Serialize(message);
+        File.AppendAllText(file, line + "\n");
+        TruncateIfNeeded();
+    }
+
+    public List<ChatMessage> LoadAllMessages()
+    {
+        var messages = new List<ChatMessage>();
+        if (!Directory.Exists(_directory))
+            return messages;
+
+        var files = Directory.GetFiles(_directory, "*.jsonl")
+            .OrderBy(f => Path.GetFileName(f))
+            .ToArray();
+
+        foreach (var file in files)
+        {
+            foreach (var line in File.ReadAllLines(file))
+            {
+                if (string.IsNullOrWhiteSpace(line)) continue;
+                try
+                {
+                    var msg = JsonSerializer.Deserialize<ChatMessage>(line);
+                    if (msg != null) messages.Add(msg);
+                }
+                catch { }
+            }
+        }
+
+        return messages;
     }
 
     public List<string> GetLastThoughts(int count)
     {
-        try
-        {
-            if (!File.Exists(_path)) return new List<string>();
-            var lines = File.ReadAllLines(_path)
-                .Where(l => !string.IsNullOrWhiteSpace(l))
-                .ToList();
-            return lines.Skip(Math.Max(0, lines.Count - count)).ToList();
-        }
-        catch
-        {
-            return new List<string>();
-        }
+        var all = LoadAllMessages();
+        return all
+            .Where(m => m.Source == MessageSource.Ai)
+            .Select(m => m.Text)
+            .TakeLast(count)
+            .ToList();
     }
 
-    public void AppendThought(string thought)
+    public void TruncateIfNeeded()
     {
-        var dir = Path.GetDirectoryName(_path);
-        if (!string.IsNullOrEmpty(dir))
-            Directory.CreateDirectory(dir);
+        if (!Directory.Exists(_directory)) return;
 
-        List<string> lines;
-        try
+        var files = Directory.GetFiles(_directory, "*.jsonl")
+            .OrderBy(f => Path.GetFileName(f))
+            .ToList();
+
+        var totalSize = files.Sum(f => new FileInfo(f).Length);
+
+        while (totalSize > _maxBytes && files.Count > 1)
         {
-            lines = File.Exists(_path)
-                ? File.ReadAllLines(_path).Where(l => !string.IsNullOrWhiteSpace(l)).ToList()
-                : new List<string>();
+            var oldest = files[0];
+            totalSize -= new FileInfo(oldest).Length;
+            File.Delete(oldest);
+            files.RemoveAt(0);
         }
-        catch
-        {
-            lines = new List<string>();
-        }
-
-        lines.Add(thought);
-
-        if (lines.Count > _maxLines)
-            lines = lines.Skip(lines.Count - _maxLines).ToList();
-
-        File.WriteAllLines(_path, lines);
     }
 }
