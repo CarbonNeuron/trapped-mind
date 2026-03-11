@@ -1,6 +1,5 @@
 ---
 - name: Clone trapped-mind repository
-  become_user: "{{ app_user }}"
   git:
     repo: "{{ repo_url }}"
     dest: "{{ app_dir }}"
@@ -8,7 +7,6 @@
   notify: restart-app
 
 - name: Build trapped-mind
-  become_user: "{{ app_user }}"
   command: dotnet build -c Release
   args:
     chdir: "{{ app_dir }}"

@@ -4,7 +4,7 @@
   become: true
   vars:
     app_user: carbon
-    app_dir: "/home/{{ app_user }}/trapped-mind"
+    app_dir: "/etc/trapped-mind"
     repo_url: "https://github.com/carbonneuron/trapped-mind.git"
 
   roles:
