@@ -67,7 +67,7 @@ public class Renderer
 
     private static Table BuildStatsTable(SystemStats stats, int termWidth)
     {
-        var table = new Table { Border = TableBorder.None, Expand = true };
+        var table = new Table { Border = TableBorder.None, Expand = true, ShowHeaders = false };
         table.AddColumn(new TableColumn("") { Alignment = Justify.Center });
         table.AddColumn(new TableColumn("") { Alignment = Justify.Center });
         table.AddColumn(new TableColumn("") { Alignment = Justify.Center });
