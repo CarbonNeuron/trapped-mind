@@ -1,5 +1,6 @@
 using System.Globalization;
 using Terminal.Gui;
+using Size = System.Drawing.Size;
 using Point = System.Drawing.Point;
 
 namespace TrappedMind;
@@ -8,48 +9,40 @@ public class ChatView : View
 {
     private readonly List<MessageCard> _cards = new();
     private MessageCard? _streamingCard;
-    private bool _needsScroll;
+    private int _totalHeight;
+    private bool _scrollPending;
 
     public ChatView()
     {
         CanFocus = true;
         ContentSizeTracksViewport = false;
 
-        // Scroll after layout completes so content size is accurate
+        // Re-layout and scroll after every layout pass (this is when
+        // Viewport has real dimensions, including the very first time)
         SubviewsLaidOut += (_, _) =>
         {
-            if (!_needsScroll) return;
-            _needsScroll = false;
-
-            var contentHeight = GetContentSize().Height;
-            var viewportHeight = Viewport.Height;
-            if (contentHeight > viewportHeight)
-            {
-                Viewport = Viewport with
-                {
-                    Location = new Point(0, contentHeight - viewportHeight)
-                };
-            }
+            if (_cards.Count == 0) return;
+            RecomputeLayout();
         };
     }
 
     public void AddMessage(ChatMessage message)
     {
-        var card = CreateCard(message);
+        var card = new MessageCard(message);
         _cards.Add(card);
         Add(card);
-        PositionCard(card);
-        RequestScrollToBottom();
+        _scrollPending = true;
+        SetNeedsLayout();
     }
 
     public void BeginStreaming()
     {
         var placeholder = new ChatMessage(DateTime.Now, "...", MessageSource.Ai);
-        _streamingCard = CreateCard(placeholder);
+        _streamingCard = new MessageCard(placeholder);
         _cards.Add(_streamingCard);
         Add(_streamingCard);
-        PositionCard(_streamingCard);
-        RequestScrollToBottom();
+        _scrollPending = true;
+        SetNeedsLayout();
     }
 
     public void UpdateStreaming(string partialText)
@@ -57,63 +50,85 @@ public class ChatView : View
         if (_streamingCard is null) return;
 
         _streamingCard.UpdateText(partialText);
-        RequestScrollToBottom();
+        _scrollPending = true;
+        SetNeedsLayout();
     }
 
-    private MessageCard CreateCard(ChatMessage message)
+    private void RecomputeLayout()
     {
-        return new MessageCard(message)
+        var width = Viewport.Width;
+        if (width <= 0) return;
+
+        int y = 0;
+        foreach (var card in _cards)
         {
-            X = 0,
-            Width = Dim.Fill(),
-            Height = Dim.Auto(DimAutoStyle.Content),
-        };
+            var h = ComputeCardHeight(card, width);
+            card.X = 0;
+            card.Y = y;
+            card.Width = width;
+            card.Height = h;
+            y += h + 1;
+        }
+
+        _totalHeight = y;
+        SetContentSize(new Size(width, Math.Max(1, _totalHeight)));
+
+        if (_scrollPending)
+        {
+            _scrollPending = false;
+            var viewportHeight = Viewport.Height;
+            if (_totalHeight > viewportHeight && viewportHeight > 0)
+            {
+                Viewport = Viewport with
+                {
+                    Location = new Point(0, _totalHeight - viewportHeight)
+                };
+            }
+        }
     }
 
-    private void PositionCard(MessageCard card)
+    private static int ComputeCardHeight(MessageCard card, int viewWidth)
     {
-        var idx = _cards.IndexOf(card);
-        card.Y = idx == 0
-            ? 0
-            : Pos.Bottom(_cards[idx - 1]) + 1;
-    }
+        // FrameView border: 1 left + 1 right
+        var innerWidth = Math.Max(1, viewWidth - 2);
+        var text = card.MessageText;
+        if (string.IsNullOrEmpty(text))
+            return 3;
 
-    private void RequestScrollToBottom()
-    {
-        _needsScroll = true;
-        SetNeedsDraw();
+        var lines = TextFormatter.WordWrapText(text, innerWidth);
+        return Math.Max(3, lines.Count + 2);
     }
 }
 
 internal class MessageCard : FrameView
 {
     private readonly Label _textLabel;
-    private readonly bool _isUser;
+
+    public string MessageText => _textLabel.Text ?? "";
 
     public MessageCard(ChatMessage message)
     {
-        _isUser = message.Source == MessageSource.User;
+        var isUser = message.Source == MessageSource.User;
 
-        Title = _isUser
+        Title = isUser
             ? $"{message.FormattedTimestamp} [you]"
             : message.FormattedTimestamp;
 
         BorderStyle = LineStyle.Rounded;
 
-        var borderColor = _isUser ? Color.Blue : Color.DarkGray;
+        var borderColor = isUser ? Color.Blue : Color.DarkGray;
         ColorScheme = new ColorScheme
         {
             Normal = new Terminal.Gui.Attribute(borderColor, Color.Black),
         };
 
-        var textColor = _isUser ? Color.BrightCyan : Color.White;
+        var textColor = isUser ? Color.BrightCyan : Color.White;
         _textLabel = new Label
         {
             Text = message.Text,
             X = 0,
             Y = 0,
             Width = Dim.Fill(),
-            Height = Dim.Auto(DimAutoStyle.Text),
         };
         _textLabel.TextFormatter.WordWrap = true;
         _textLabel.ColorScheme = new ColorScheme
@@ -128,6 +143,5 @@ internal class MessageCard : FrameView
     {
         _textLabel.Text = text;
         Title = DateTime.Now.ToString("MMM d h:mm tt", CultureInfo.InvariantCulture);
-        SetNeedsDraw();
     }
 }
