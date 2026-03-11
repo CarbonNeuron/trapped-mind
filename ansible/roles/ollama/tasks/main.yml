@@ -1,0 +1,33 @@
+---
+- name: Install Ollama
+  shell: curl -fsSL https://ollama.com/install.sh | sh
+  args:
+    creates: /usr/local/bin/ollama
+
+- name: Enable and start Ollama service
+  systemd:
+    name: ollama
+    enabled: true
+    state: started
+
+- name: Wait for Ollama to be ready
+  uri:
+    url: http://localhost:11434/api/tags
+    method: GET
+  register: ollama_ready
+  retries: 10
+  delay: 3
+  until: ollama_ready.status == 200
+
+- name: Pull qwen2.5:1.5b model
+  command: ollama pull qwen2.5:1.5b
+  register: pull_result
+  changed_when: "'pulling' in pull_result.stdout"
+
+- name: Copy Modelfile
+  copy:
+    src: Modelfile
+    dest: /tmp/trapped-Modelfile
+
+- name: Create trapped model
+  command: ollama create trapped -f /tmp/trapped-Modelfile

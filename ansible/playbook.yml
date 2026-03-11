@@ -1,0 +1,15 @@
+---
+- name: Provision TrappedMind laptop
+  hosts: all
+  become: true
+  vars:
+    app_user: carbon
+    app_dir: "/home/{{ app_user }}/trapped-mind"
+    repo_url: "https://github.com/carbonneuron/trapped-mind.git"
+
+  roles:
+    - system
+    - network
+    - dotnet
+    - ollama
+    - trapped-mind

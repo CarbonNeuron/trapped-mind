@@ -1,0 +1,7 @@
+---
+- name: update-console-setup
+  command: setupcon --save
+
+- name: reload-systemd
+  systemd:
+    daemon_reload: true

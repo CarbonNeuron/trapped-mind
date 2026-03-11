@@ -1,0 +1,5 @@
+# Auto-launch trapped-mind on tty1
+if [ "$(tty)" = "/dev/tty1" ]; then
+    cd {{ app_dir }}
+    exec dotnet run --project TrappedMind
+fi

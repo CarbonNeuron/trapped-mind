@@ -1,0 +1,9 @@
+---
+- name: Deploy USB ethernet netplan config
+  copy:
+    src: 01-usb-eth.yaml
+    dest: /etc/netplan/01-usb-eth.yaml
+    owner: root
+    group: root
+    mode: "0600"
+  notify: apply-netplan

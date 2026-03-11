@@ -1,0 +1,20 @@
+---
+- name: Clone trapped-mind repository
+  become_user: "{{ app_user }}"
+  git:
+    repo: "{{ repo_url }}"
+    dest: "{{ app_dir }}"
+    version: main
+
+- name: Build trapped-mind
+  become_user: "{{ app_user }}"
+  command: dotnet build
+  args:
+    chdir: "{{ app_dir }}"
+
+- name: Deploy bash_profile for auto-launch on tty1
+  become_user: "{{ app_user }}"
+  template:
+    src: bash_profile.j2
+    dest: "/home/{{ app_user }}/.bash_profile"
+    mode: "0644"

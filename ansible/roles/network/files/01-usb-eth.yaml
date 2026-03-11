@@ -1,0 +1,8 @@
+network:
+  version: 2
+  ethernets:
+    usb-eth:
+      match:
+        name: "enx*"
+      dhcp4: true
+      optional: true

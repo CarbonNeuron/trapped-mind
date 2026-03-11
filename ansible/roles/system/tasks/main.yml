@@ -1,0 +1,38 @@
+---
+- name: Install system packages
+  apt:
+    name:
+      - cowsay
+      - lm-sensors
+      - avahi-daemon
+    state: present
+    update_cache: true
+
+- name: Enable and start avahi-daemon
+  systemd:
+    name: avahi-daemon
+    enabled: true
+    state: started
+
+- name: Configure console font
+  copy:
+    src: console-setup
+    dest: /etc/default/console-setup
+    owner: root
+    group: root
+    mode: "0644"
+  notify: update-console-setup
+
+- name: Set up auto-login on tty1
+  file:
+    path: /etc/systemd/system/getty@tty1.service.d
+    state: directory
+
+- name: Configure auto-login override
+  copy:
+    content: |
+      [Service]
+      ExecStart=
+      ExecStart=-/sbin/agetty --autologin {{ app_user }} --noclear %I $TERM
+    dest: /etc/systemd/system/getty@tty1.service.d/override.conf
+  notify: reload-systemd
