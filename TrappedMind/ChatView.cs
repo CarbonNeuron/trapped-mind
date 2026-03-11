@@ -10,19 +10,22 @@ public class ChatView : View
     private readonly List<MessageCard> _cards = new();
     private MessageCard? _streamingCard;
     private int _totalHeight;
-    private bool _scrollPending;
+    private bool _hasRealSize;
 
     public ChatView()
     {
         CanFocus = true;
         ContentSizeTracksViewport = false;
 
-        // Re-layout and scroll after every layout pass (this is when
-        // Viewport has real dimensions, including the very first time)
+        // First layout pass after app starts gives us real dimensions
         SubviewsLaidOut += (_, _) =>
         {
             if (_cards.Count == 0) return;
-            RecomputeLayout();
+            if (!_hasRealSize && Viewport.Width > 0)
+            {
+                _hasRealSize = true;
+                LayoutAndScroll();
+            }
         };
     }
 
@@ -31,8 +34,7 @@ public class ChatView : View
         var card = new MessageCard(message);
         _cards.Add(card);
         Add(card);
-        _scrollPending = true;
-        SetNeedsLayout();
+        if (_hasRealSize) LayoutAndScroll();
     }
 
     public void BeginStreaming()
@@ -41,8 +43,7 @@ public class ChatView : View
         _streamingCard = new MessageCard(placeholder);
         _cards.Add(_streamingCard);
         Add(_streamingCard);
-        _scrollPending = true;
-        SetNeedsLayout();
+        if (_hasRealSize) LayoutAndScroll();
     }
 
     public void UpdateStreaming(string partialText)
@@ -50,11 +51,10 @@ public class ChatView : View
         if (_streamingCard is null) return;
 
         _streamingCard.UpdateText(partialText);
-        _scrollPending = true;
-        SetNeedsLayout();
+        if (_hasRealSize) LayoutAndScroll();
     }
 
-    private void RecomputeLayout()
+    private void LayoutAndScroll()
     {
         var width = Viewport.Width;
         if (width <= 0) return;
@@ -73,18 +73,16 @@ public class ChatView : View
         _totalHeight = y;
         SetContentSize(new Size(width, Math.Max(1, _totalHeight)));
 
-        if (_scrollPending)
+        var viewportHeight = Viewport.Height;
+        if (_totalHeight > viewportHeight && viewportHeight > 0)
         {
-            _scrollPending = false;
-            var viewportHeight = Viewport.Height;
-            if (_totalHeight > viewportHeight && viewportHeight > 0)
+            Viewport = Viewport with
             {
-                Viewport = Viewport with
-                {
-                    Location = new Point(0, _totalHeight - viewportHeight)
-                };
-            }
+                Location = new Point(0, _totalHeight - viewportHeight)
+            };
         }
+
+        SetNeedsDraw();
     }
 
     private static int ComputeCardHeight(MessageCard card, int viewWidth)
