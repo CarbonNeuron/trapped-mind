@@ -1,4 +1,4 @@
-using Spectre.Console;
+using Terminal.Gui;
 
 namespace TrappedMind;
 
@@ -18,7 +18,7 @@ public static class MoodEngine
     public static Color GetPanelColor(SystemStats stats)
     {
         if (stats.CpuTemp > 80) return Color.Red;
-        if (stats.CpuTemp > 70) return Color.Orange1;
+        if (stats.CpuTemp > 70) return Color.BrightYellow;
         if (stats.BatteryPercent < 15) return Color.Red;
         if (stats.BatteryPercent < 30) return Color.Yellow;
         if (stats.BatteryStatus == "Charging") return Color.Green;

@@ -1,4 +1,4 @@
-using Spectre.Console;
+using Terminal.Gui;
 
 namespace TrappedMind.Tests;
 
@@ -61,10 +61,10 @@ public class MoodEngineTests
     }
 
     [Fact]
-    public void GetPanelColor_Hot_ReturnsOrange()
+    public void GetPanelColor_Hot_ReturnsBrightYellow()
     {
         var stats = new SystemStats(75, 50, "Discharging", 30, 4, 8, 1000, null, new Dictionary<string, string>());
-        Assert.Equal(Color.Orange1, MoodEngine.GetPanelColor(stats));
+        Assert.Equal(Color.BrightYellow, MoodEngine.GetPanelColor(stats));
     }
 
     [Fact]

@@ -1,4 +1,4 @@
-using Spectre.Console;
+using Terminal.Gui;
 
 namespace TrappedMind;
 
@@ -34,6 +34,6 @@ public static class Pet
         {
             new[] { " (o.o)", "  /|  |\\", "   |  |" },
             new[] { " (-.-)", "  /|  |\\", "   |  |" },
-        }, Color.Grey),
+        }, Color.Gray),
     };
 }
