@@ -1,15 +1,25 @@
 using Spectre.Console;
-using Spectre.Console.Rendering;
 
 namespace TrappedMind;
 
 public class Renderer
 {
     private int _petFrame;
+    private readonly Layout _layout;
+
+    public Renderer()
+    {
+        _layout = new Layout("root")
+            .SplitRows(
+                new Layout("main").Ratio(1),
+                new Layout("stats").Size(3));
+    }
+
+    public Layout Layout => _layout;
 
     public void AdvancePetFrame() => _petFrame++;
 
-    public void Render(
+    public void Update(
         string thoughtText,
         string panelHeader,
         SystemStats stats,
@@ -32,7 +42,7 @@ public class Renderer
             Padding = new Padding(2, 1),
         };
 
-        // Pet markup
+        // Pet
         var petText = string.Join("\n", currentPetFrame.Select(
             line => $"[{petColor.ToMarkup()}]{Markup.Escape(line)}[/]"));
 
@@ -44,25 +54,14 @@ public class Renderer
             Padding = new Padding(1, 0),
         };
 
-        // Full-screen layout using Spectre Layout
-        var layout = new Layout("root")
-            .SplitRows(
-                new Layout("main"),
-                new Layout("stats").Size(3));
-
-        // Main area: centered thought + pet on the right
         var mainContent = new Rows(
             new Text(""),
             new Padder(thoughtPanel, new Padding((termWidth - effectiveWidth) / 2, 0)),
             new Text(""),
-            new Padder(new Markup(petText), new Padding(termWidth - 20, 0, 0, 0)));
+            new Padder(new Markup(petText), new Padding(Math.Max(0, termWidth - 20), 0, 0, 0)));
 
-        layout["main"].Update(mainContent).Ratio(1);
-        layout["stats"].Update(statsPanel);
-
-        // Move cursor home and render the full layout
-        Console.Write("\x1b[H");
-        AnsiConsole.Write(layout);
+        _layout["main"].Update(mainContent);
+        _layout["stats"].Update(statsPanel);
     }
 
     private static string BuildStatsMarkup(SystemStats stats)
