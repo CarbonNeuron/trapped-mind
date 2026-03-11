@@ -5,3 +5,8 @@
 - name: reload-systemd
   systemd:
     daemon_reload: true
+
+- name: restart-timesyncd
+  systemd:
+    name: systemd-timesyncd
+    state: restarted

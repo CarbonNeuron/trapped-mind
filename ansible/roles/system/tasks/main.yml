@@ -4,6 +4,10 @@
     name: cowsay
     state: absent
 
+- name: Set timezone to America/Chicago
+  community.general.timezone:
+    name: America/Chicago
+
 - name: Install system packages
   apt:
     name:
@@ -16,8 +20,27 @@
       - acl
       - ansible
       - git
+      - systemd-timesyncd
     state: present
     update_cache: true
+
+- name: Enable and start systemd-timesyncd (NTP)
+  systemd:
+    name: systemd-timesyncd
+    enabled: true
+    state: started
+
+- name: Configure NTP servers
+  copy:
+    content: |
+      [Time]
+      NTP=0.pool.ntp.org 1.pool.ntp.org 2.pool.ntp.org 3.pool.ntp.org
+      FallbackNTP=ntp.ubuntu.com
+    dest: /etc/systemd/timesyncd.conf
+    owner: root
+    group: root
+    mode: "0644"
+  notify: restart-timesyncd
 
 - name: Enable and start avahi-daemon
   systemd:

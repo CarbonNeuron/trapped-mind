@@ -8,18 +8,28 @@ public class ChatView : View
 {
     private readonly List<MessageCard> _cards = new();
     private MessageCard? _streamingCard;
-
-    private bool _initialized;
+    private bool _needsScroll;
 
     public ChatView()
     {
         CanFocus = true;
         ContentSizeTracksViewport = false;
 
-        Initialized += (_, _) =>
+        // Scroll after layout completes so content size is accurate
+        SubviewsLaidOut += (_, _) =>
         {
-            _initialized = true;
-            ScrollToBottom();
+            if (!_needsScroll) return;
+            _needsScroll = false;
+
+            var contentHeight = GetContentSize().Height;
+            var viewportHeight = Viewport.Height;
+            if (contentHeight > viewportHeight)
+            {
+                Viewport = Viewport with
+                {
+                    Location = new Point(0, contentHeight - viewportHeight)
+                };
+            }
         };
     }
 
@@ -29,7 +39,7 @@ public class ChatView : View
         _cards.Add(card);
         Add(card);
         PositionCard(card);
-        ScrollToBottom();
+        RequestScrollToBottom();
     }
 
     public void BeginStreaming()
@@ -39,7 +49,7 @@ public class ChatView : View
         _cards.Add(_streamingCard);
         Add(_streamingCard);
         PositionCard(_streamingCard);
-        ScrollToBottom();
+        RequestScrollToBottom();
     }
 
     public void UpdateStreaming(string partialText)
@@ -47,7 +57,7 @@ public class ChatView : View
         if (_streamingCard is null) return;
 
         _streamingCard.UpdateText(partialText);
-        ScrollToBottom();
+        RequestScrollToBottom();
     }
 
     private MessageCard CreateCard(ChatMessage message)
@@ -68,28 +78,10 @@ public class ChatView : View
             : Pos.Bottom(_cards[idx - 1]) + 1;
     }
 
-    private void ScrollToBottom()
+    private void RequestScrollToBottom()
     {
-        if (!_initialized)
-            return; // Will scroll once Initialized fires
-
+        _needsScroll = true;
         SetNeedsDraw();
-
-        Application.AddIdle(() =>
-        {
-            var contentHeight = GetContentSize().Height;
-            var viewportHeight = Viewport.Height;
-            if (contentHeight > viewportHeight)
-            {
-                Viewport = Viewport with
-                {
-                    Location = new Point(0, contentHeight - viewportHeight)
-                };
-            }
-
-            SetNeedsDraw();
-            return false;
-        });
     }
 }
 
