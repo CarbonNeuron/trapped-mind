@@ -11,6 +11,13 @@ public static class PromptBuilder
         sb.AppendLine($"Battery: {(stats.BatteryPercent.HasValue ? $"{stats.BatteryPercent}% ({stats.BatteryStatus ?? "?"})" : "?")}");
         sb.AppendLine($"RAM: {(stats.RamUsedGb.HasValue ? $"{stats.RamUsedGb}G/{stats.RamTotalGb}G" : "?")}");
         sb.AppendLine($"Uptime: {(stats.UptimeSeconds.HasValue ? SystemInfo.FormatUptime(stats.UptimeSeconds.Value) : "?")}");
+        sb.AppendLine($"Fan speed: {(stats.FanSpeedRpm.HasValue ? $"{stats.FanSpeedRpm} RPM" : "?")}");
+        if (stats.IpAddresses != null && stats.IpAddresses.Count > 0)
+        {
+            sb.AppendLine("Network interfaces:");
+            foreach (var kv in stats.IpAddresses)
+                sb.AppendLine($"  {kv.Key}: {kv.Value}");
+        }
 
         if (recentThoughts.Count > 0)
         {

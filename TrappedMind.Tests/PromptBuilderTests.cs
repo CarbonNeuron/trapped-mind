@@ -47,4 +47,21 @@ public class PromptBuilderTests
         var prompt = PromptBuilder.Build(stats, new List<string>());
         Assert.Contains("Express a new thought", prompt);
     }
+
+    [Fact]
+    public void Build_IncludesFanSpeed()
+    {
+        var stats = new SystemStats(58.0, 72, "Discharging", 23.0, 4.2, 7.5, 3600, 2100, new Dictionary<string, string>());
+        var prompt = PromptBuilder.Build(stats, new List<string>());
+        Assert.Contains("Fan speed: 2100 RPM", prompt);
+    }
+
+    [Fact]
+    public void Build_IncludesIpAddresses()
+    {
+        var ips = new Dictionary<string, string> { { "eth0", "192.168.1.42" } };
+        var stats = new SystemStats(58.0, 72, "Discharging", 23.0, 4.2, 7.5, 3600, null, ips);
+        var prompt = PromptBuilder.Build(stats, new List<string>());
+        Assert.Contains("eth0: 192.168.1.42", prompt);
+    }
 }
