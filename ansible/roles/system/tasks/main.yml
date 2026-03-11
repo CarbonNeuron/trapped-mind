@@ -13,6 +13,7 @@
       - foot
       - fonts-firacode
       - fonts-noto
+      - acl
       - ansible
       - git
     state: present
