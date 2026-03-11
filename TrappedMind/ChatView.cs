@@ -8,6 +8,34 @@ public class ChatView : View
     private readonly List<ChatLine> _lines = new();
     private int _scrollOffset;
 
+    private int ContentWidth => Math.Max(10, Viewport.Width - 4); // "| " prefix + " |" suffix space
+
+    private List<string> WrapText(string text, int maxWidth)
+    {
+        var result = new List<string>();
+        foreach (var line in text.Split('\n'))
+        {
+            if (line.Length <= maxWidth)
+            {
+                result.Add(line);
+                continue;
+            }
+
+            var remaining = line;
+            while (remaining.Length > maxWidth)
+            {
+                // Try to break at a space
+                var breakAt = remaining.LastIndexOf(' ', maxWidth);
+                if (breakAt <= 0) breakAt = maxWidth;
+                result.Add(remaining[..breakAt]);
+                remaining = remaining[breakAt..].TrimStart();
+            }
+            if (remaining.Length > 0)
+                result.Add(remaining);
+        }
+        return result;
+    }
+
     public void AddMessage(ChatMessage message)
     {
         var isUser = message.Source == MessageSource.User;
@@ -15,16 +43,12 @@ public class ChatView : View
             ? $" {message.FormattedTimestamp} [you]"
             : $" {message.FormattedTimestamp}";
 
-        // Box top
-        _lines.Add(new ChatLine("+" + new string('-', 60) + "+", Color.DarkGray));
-        // Timestamp
+        var width = ContentWidth;
+        _lines.Add(new ChatLine("+" + new string('-', width + 2) + "+", Color.DarkGray));
         _lines.Add(new ChatLine("| " + timestampText, isUser ? Color.Blue : Color.DarkGray));
-        // Message text
-        foreach (var textLine in message.Text.Split('\n'))
-            _lines.Add(new ChatLine("| " + textLine, isUser ? Color.BrightCyan : Color.White));
-        // Box bottom
-        _lines.Add(new ChatLine("+" + new string('-', 60) + "+", Color.DarkGray));
-        // Blank separator
+        foreach (var wrapped in WrapText(message.Text, width))
+            _lines.Add(new ChatLine("| " + wrapped, isUser ? Color.BrightCyan : Color.White));
+        _lines.Add(new ChatLine("+" + new string('-', width + 2) + "+", Color.DarkGray));
         _lines.Add(new ChatLine("", Color.Black));
 
         ScrollToBottom();
@@ -33,10 +57,11 @@ public class ChatView : View
     public void BeginStreaming()
     {
         var now = DateTime.Now.ToString("MMM d h:mm tt", CultureInfo.InvariantCulture);
-        _lines.Add(new ChatLine("+" + new string('-', 60) + "+", Color.DarkGray));
+        var width = ContentWidth;
+        _lines.Add(new ChatLine("+" + new string('-', width + 2) + "+", Color.DarkGray));
         _lines.Add(new ChatLine("| " + now, Color.DarkGray));
         _lines.Add(new ChatLine("| ...", Color.White));
-        _lines.Add(new ChatLine("+" + new string('-', 60) + "+", Color.DarkGray));
+        _lines.Add(new ChatLine("+" + new string('-', width + 2) + "+", Color.DarkGray));
         _lines.Add(new ChatLine("", Color.Black));
 
         ScrollToBottom();
@@ -44,7 +69,6 @@ public class ChatView : View
 
     public void UpdateStreaming(string partialText)
     {
-        // Find last box: search backwards for the last blank separator
         var lastBlank = -1;
         for (var i = _lines.Count - 1; i >= 0; i--)
         {
@@ -57,7 +81,6 @@ public class ChatView : View
 
         if (lastBlank < 0) return;
 
-        // Find the box-top before this blank
         var boxBottom = lastBlank - 1;
         if (boxBottom < 0) return;
 
@@ -73,16 +96,15 @@ public class ChatView : View
 
         if (boxTop < 0) return;
 
-        // Remove from boxTop to lastBlank (inclusive)
         _lines.RemoveRange(boxTop, lastBlank - boxTop + 1);
 
-        // Re-add the box with updated content
         var now = DateTime.Now.ToString("MMM d h:mm tt", CultureInfo.InvariantCulture);
-        _lines.Add(new ChatLine("+" + new string('-', 60) + "+", Color.DarkGray));
+        var width = ContentWidth;
+        _lines.Add(new ChatLine("+" + new string('-', width + 2) + "+", Color.DarkGray));
         _lines.Add(new ChatLine("| " + now, Color.DarkGray));
-        foreach (var line in partialText.Split('\n'))
-            _lines.Add(new ChatLine("| " + line, Color.White));
-        _lines.Add(new ChatLine("+" + new string('-', 60) + "+", Color.DarkGray));
+        foreach (var wrapped in WrapText(partialText, width))
+            _lines.Add(new ChatLine("| " + wrapped, Color.White));
+        _lines.Add(new ChatLine("+" + new string('-', width + 2) + "+", Color.DarkGray));
         _lines.Add(new ChatLine("", Color.Black));
 
         ScrollToBottom();
