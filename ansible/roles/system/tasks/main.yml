@@ -2,7 +2,6 @@
 - name: Install system packages
   apt:
     name:
-      - cowsay
       - lm-sensors
       - avahi-daemon
     state: present
