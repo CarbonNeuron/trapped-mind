@@ -27,6 +27,14 @@ public class Config
     [JsonPropertyName("systemPrompt")]
     public string? SystemPrompt { get; set; }
 
+    [JsonPropertyName("historyDir")]
+    public string HistoryDir { get; set; } = Path.Combine(
+        Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
+        ".trapped-mind", "history");
+
+    [JsonPropertyName("maxHistoryBytes")]
+    public long MaxHistoryBytes { get; set; } = 10L * 1024 * 1024 * 1024;
+
     public static Config Default() => new();
 
     public static Config FromJson(string json)
@@ -42,6 +50,8 @@ public class Config
         if (root.TryGetProperty("panelWidth", out var pw)) config.PanelWidth = pw.GetInt32();
         if (root.TryGetProperty("historyPath", out var hp)) config.HistoryPath = hp.GetString()!;
         if (root.TryGetProperty("systemPrompt", out var sp)) config.SystemPrompt = sp.GetString();
+        if (root.TryGetProperty("historyDir", out var hd)) config.HistoryDir = hd.GetString()!;
+        if (root.TryGetProperty("maxHistoryBytes", out var mhb)) config.MaxHistoryBytes = mhb.GetInt64();
 
         return config;
     }
