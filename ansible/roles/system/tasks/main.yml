@@ -9,6 +9,10 @@
     name:
       - lm-sensors
       - avahi-daemon
+      - cage
+      - foot
+      - fonts-firacode
+      - fonts-noto
     state: present
     update_cache: true
 
@@ -26,6 +30,19 @@
     group: root
     mode: "0644"
   notify: update-console-setup
+
+- name: Create foot config directory
+  become_user: "{{ app_user }}"
+  file:
+    path: "/home/{{ app_user }}/.config/foot"
+    state: directory
+
+- name: Deploy foot config
+  become_user: "{{ app_user }}"
+  copy:
+    src: foot.ini
+    dest: "/home/{{ app_user }}/.config/foot/foot.ini"
+    mode: "0644"
 
 - name: Set up auto-login on tty1
   file:
