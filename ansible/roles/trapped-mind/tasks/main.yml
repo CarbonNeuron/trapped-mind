@@ -1,4 +1,10 @@
 ---
+- name: Mark app directory as git safe directory
+  community.general.git_config:
+    name: safe.directory
+    value: "{{ app_dir }}"
+    scope: global
+
 - name: Clone trapped-mind repository
   git:
     repo: "{{ repo_url }}"

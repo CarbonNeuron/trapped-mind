@@ -2,6 +2,7 @@
 set -euo pipefail
 
 cd {{ app_dir }}
+git config --global --add safe.directory {{ app_dir }}
 
 # Fetch latest from remote
 git fetch origin master
