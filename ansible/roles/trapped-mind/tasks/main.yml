@@ -9,7 +9,7 @@
 
 - name: Build trapped-mind
   become_user: "{{ app_user }}"
-  command: dotnet build
+  command: dotnet build -c Release
   args:
     chdir: "{{ app_dir }}"
   notify: restart-app
