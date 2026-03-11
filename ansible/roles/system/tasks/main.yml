@@ -1,4 +1,9 @@
 ---
+- name: Remove cowsay to prevent ansible from using it
+  apt:
+    name: cowsay
+    state: absent
+
 - name: Install system packages
   apt:
     name:

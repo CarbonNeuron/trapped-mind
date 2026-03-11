@@ -19,12 +19,10 @@ public class Renderer
         var panelColor = MoodEngine.GetPanelColor(stats);
         var (petFrames, petColor) = Pet.GetFrames(petMood);
         var currentPetFrame = petFrames[_petFrame % petFrames.Length];
-
         var termWidth = AnsiConsole.Profile.Width;
-        var termHeight = AnsiConsole.Profile.Height;
         var effectiveWidth = Math.Min(panelWidth, termWidth - 4);
 
-        // Build thought panel
+        // Thought panel
         var thoughtPanel = new Panel(new Markup(Markup.Escape(thoughtText)))
         {
             Border = BoxBorder.Double,
@@ -34,41 +32,37 @@ public class Renderer
             Padding = new Padding(2, 1),
         };
 
-        // Build pet
+        // Pet markup
         var petText = string.Join("\n", currentPetFrame.Select(
             line => $"[{petColor.ToMarkup()}]{Markup.Escape(line)}[/]"));
 
-        // Build stats bar
-        var statsMarkup = BuildStatsMarkup(stats);
-        var statsPanel = new Panel(new Markup(statsMarkup))
+        // Stats bar
+        var statsPanel = new Panel(new Markup(BuildStatsMarkup(stats)))
         {
             Border = BoxBorder.Heavy,
             BorderStyle = new Style(Color.Grey),
             Padding = new Padding(1, 0),
         };
 
-        // Calculate top padding to vertically center
-        var contentHeight = 8 + currentPetFrame.Length + 5;
-        var topPad = Math.Max(1, (termHeight - contentHeight) / 3);
+        // Full-screen layout using Spectre Layout
+        var layout = new Layout("root")
+            .SplitRows(
+                new Layout("main"),
+                new Layout("stats").Size(3));
 
-        AnsiConsole.Cursor.SetPosition(0, 0);
+        // Main area: centered thought + pet on the right
+        var mainContent = new Rows(
+            new Text(""),
+            new Padder(thoughtPanel, new Padding((termWidth - effectiveWidth) / 2, 0)),
+            new Text(""),
+            new Padder(new Markup(petText), new Padding(termWidth - 20, 0, 0, 0)));
 
-        var rows = new List<IRenderable>();
-        for (int i = 0; i < topPad; i++)
-            rows.Add(new Text(new string(' ', termWidth)));
+        layout["main"].Update(mainContent).Ratio(1);
+        layout["stats"].Update(statsPanel);
 
-        rows.Add(new Padder(thoughtPanel, new Padding((termWidth - effectiveWidth) / 2, 0)));
-        rows.Add(new Text(""));
-        rows.Add(new Padder(new Markup(petText), new Padding(termWidth - 20, 0, 0, 0)));
-        rows.Add(new Text(""));
-        rows.Add(statsPanel);
-
-        AnsiConsole.Write(new Rows(rows));
-
-        // Fill remaining with blanks
-        var rendered = topPad + contentHeight;
-        for (var i = rendered; i < termHeight; i++)
-            AnsiConsole.Write(new Text(new string(' ', termWidth)));
+        // Move cursor home and render the full layout
+        Console.Write("\x1b[H");
+        AnsiConsole.Write(layout);
     }
 
     private static string BuildStatsMarkup(SystemStats stats)
