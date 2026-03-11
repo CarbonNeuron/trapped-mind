@@ -11,7 +11,8 @@ public class Renderer
     {
         _layout = new Layout("root")
             .SplitRows(
-                new Layout("main").Ratio(1),
+                new Layout("thought").Ratio(1),
+                new Layout("pet").Size(4),
                 new Layout("stats").Size(3));
     }
 
@@ -32,7 +33,7 @@ public class Renderer
         var termWidth = AnsiConsole.Profile.Width;
         var effectiveWidth = Math.Min(panelWidth, termWidth - 4);
 
-        // Thought panel
+        // Thought panel — centered
         var thoughtPanel = new Panel(new Markup(Markup.Escape(thoughtText)))
         {
             Border = BoxBorder.Double,
@@ -42,61 +43,69 @@ public class Renderer
             Padding = new Padding(2, 1),
         };
 
-        // Pet
+        // Pet — right-aligned above stats
         var petText = string.Join("\n", currentPetFrame.Select(
             line => $"[{petColor.ToMarkup()}]{Markup.Escape(line)}[/]"));
 
-        // Stats bar
-        var statsPanel = new Panel(new Markup(BuildStatsMarkup(stats)))
+        // Stats bar — full width, evenly spaced columns
+        var statsTable = BuildStatsTable(stats, termWidth);
+
+        var statsPanel = new Panel(statsTable)
         {
             Border = BoxBorder.Heavy,
             BorderStyle = new Style(Color.Grey),
-            Padding = new Padding(1, 0),
+            Padding = new Padding(0, 0),
+            Expand = true,
         };
 
-        var mainContent = new Rows(
-            new Text(""),
-            new Padder(thoughtPanel, new Padding((termWidth - effectiveWidth) / 2, 0)),
-            new Text(""),
-            new Padder(new Markup(petText), new Padding(Math.Max(0, termWidth - 20), 0, 0, 0)));
-
-        _layout["main"].Update(mainContent);
+        _layout["thought"].Update(
+            new Padder(thoughtPanel, new Padding((termWidth - effectiveWidth) / 2, 1, 0, 0)));
+        _layout["pet"].Update(
+            new Padder(new Markup(petText), new Padding(Math.Max(0, termWidth - 16), 0, 0, 0)));
         _layout["stats"].Update(statsPanel);
     }
 
-    private static string BuildStatsMarkup(SystemStats stats)
+    private static Table BuildStatsTable(SystemStats stats, int termWidth)
     {
-        var parts = new List<string>();
+        var table = new Table { Border = TableBorder.None, Expand = true };
+        table.AddColumn(new TableColumn("") { Alignment = Justify.Center });
+        table.AddColumn(new TableColumn("") { Alignment = Justify.Center });
+        table.AddColumn(new TableColumn("") { Alignment = Justify.Center });
+        table.AddColumn(new TableColumn("") { Alignment = Justify.Center });
+        table.AddColumn(new TableColumn("") { Alignment = Justify.Center });
+
+        string temp, bat, cpu, ram, up;
 
         if (stats.CpuTemp.HasValue)
         {
             var c = MoodEngine.GetTempColor(stats.CpuTemp.Value).ToMarkup();
-            parts.Add($"[{c}]TEMP {stats.CpuTemp:F0}C[/]");
+            temp = $"[{c}]TEMP {stats.CpuTemp:F0}C[/]";
         }
-        else parts.Add("[grey]TEMP ?[/]");
+        else temp = "[grey]TEMP ?[/]";
 
         if (stats.BatteryPercent.HasValue)
         {
             var c = MoodEngine.GetBatteryColor(stats.BatteryPercent.Value).ToMarkup();
-            parts.Add($"[{c}]BAT {stats.BatteryPercent}% {stats.BatteryStatus ?? "?"}[/]");
+            bat = $"[{c}]BAT {stats.BatteryPercent}% {stats.BatteryStatus ?? "?"}[/]";
         }
-        else parts.Add("[grey]BAT ?[/]");
+        else bat = "[grey]BAT ?[/]";
 
         if (stats.CpuUsage.HasValue)
         {
             var c = MoodEngine.GetCpuColor(stats.CpuUsage.Value).ToMarkup();
-            parts.Add($"[{c}]CPU {stats.CpuUsage:F0}%[/]");
+            cpu = $"[{c}]CPU {stats.CpuUsage:F0}%[/]";
         }
-        else parts.Add("[grey]CPU ?[/]");
+        else cpu = "[grey]CPU ?[/]";
 
-        if (stats.RamUsedGb.HasValue)
-            parts.Add($"[cyan]RAM {stats.RamUsedGb}G/{stats.RamTotalGb}G[/]");
-        else parts.Add("[grey]RAM ?[/]");
+        ram = stats.RamUsedGb.HasValue
+            ? $"[cyan]RAM {stats.RamUsedGb}G/{stats.RamTotalGb}G[/]"
+            : "[grey]RAM ?[/]";
 
-        if (stats.UptimeSeconds.HasValue)
-            parts.Add($"[fuchsia]UP {SystemInfo.FormatUptime(stats.UptimeSeconds.Value)}[/]");
-        else parts.Add("[grey]UP ?[/]");
+        up = stats.UptimeSeconds.HasValue
+            ? $"[fuchsia]UP {SystemInfo.FormatUptime(stats.UptimeSeconds.Value)}[/]"
+            : "[grey]UP ?[/]";
 
-        return string.Join(" | ", parts);
+        table.AddRow(new Markup(temp), new Markup(bat), new Markup(cpu), new Markup(ram), new Markup(up));
+        return table;
     }
 }
