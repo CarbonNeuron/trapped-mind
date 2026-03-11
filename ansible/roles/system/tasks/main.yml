@@ -13,6 +13,8 @@
       - foot
       - fonts-firacode
       - fonts-noto
+      - ansible
+      - git
     state: present
     update_cache: true
 
@@ -21,6 +23,15 @@
     name: avahi-daemon
     enabled: true
     state: started
+
+- name: Create kiosk user
+  user:
+    name: "{{ kiosk_user }}"
+    system: false
+    create_home: true
+    shell: /bin/bash
+    password: "!"
+    groups: []
 
 - name: Configure console font
   copy:
@@ -32,16 +43,16 @@
   notify: update-console-setup
 
 - name: Create foot config directory
-  become_user: "{{ app_user }}"
+  become_user: "{{ kiosk_user }}"
   file:
-    path: "/home/{{ app_user }}/.config/foot"
+    path: "/home/{{ kiosk_user }}/.config/foot"
     state: directory
 
 - name: Deploy foot config
-  become_user: "{{ app_user }}"
+  become_user: "{{ kiosk_user }}"
   copy:
     src: foot.ini
-    dest: "/home/{{ app_user }}/.config/foot/foot.ini"
+    dest: "/home/{{ kiosk_user }}/.config/foot/foot.ini"
     mode: "0644"
 
 - name: Set up auto-login on tty1
@@ -54,6 +65,6 @@
     content: |
       [Service]
       ExecStart=
-      ExecStart=-/sbin/agetty --autologin {{ app_user }} --noclear %I $TERM
+      ExecStart=-/sbin/agetty --autologin {{ kiosk_user }} --noclear %I $TERM
     dest: /etc/systemd/system/getty@tty1.service.d/override.conf
   notify: reload-systemd

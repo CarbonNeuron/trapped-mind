@@ -1,0 +1,19 @@
+#!/bin/bash
+set -euo pipefail
+
+cd {{ app_dir }}
+
+# Fetch latest from remote
+git fetch origin master
+
+# Exit if already up to date
+LOCAL=$(git rev-parse HEAD)
+REMOTE=$(git rev-parse origin/master)
+if [ "$LOCAL" = "$REMOTE" ]; then
+    exit 0
+fi
+
+# Pull changes and re-run ansible provisioning
+git pull origin master
+cd {{ app_dir }}/ansible
+ansible-playbook -i localhost, -c local playbook.yml

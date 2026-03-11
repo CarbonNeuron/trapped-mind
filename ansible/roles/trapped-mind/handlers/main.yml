@@ -1,5 +1,9 @@
 ---
 - name: restart-app
   shell: |
-    pkill -u {{ app_user }} cage || true
+    pkill -u {{ kiosk_user }} cage || true
   listen: restart-app
+
+- name: reload-systemd
+  systemd:
+    daemon_reload: true

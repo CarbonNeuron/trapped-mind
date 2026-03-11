@@ -1,0 +1,6 @@
+[Unit]
+Description=Check for trapped-mind updates and apply
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/trapped-mind-update.sh
