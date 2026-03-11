@@ -9,10 +9,18 @@ public class ChatView : View
     private readonly List<MessageCard> _cards = new();
     private MessageCard? _streamingCard;
 
+    private bool _initialized;
+
     public ChatView()
     {
         CanFocus = true;
         ContentSizeTracksViewport = false;
+
+        Initialized += (_, _) =>
+        {
+            _initialized = true;
+            ScrollToBottom();
+        };
     }
 
     public void AddMessage(ChatMessage message)
@@ -62,9 +70,11 @@ public class ChatView : View
 
     private void ScrollToBottom()
     {
+        if (!_initialized)
+            return; // Will scroll once Initialized fires
+
         SetNeedsDraw();
 
-        // Defer scroll until after layout so content size is computed
         Application.AddIdle(() =>
         {
             var contentHeight = GetContentSize().Height;
@@ -78,7 +88,7 @@ public class ChatView : View
             }
 
             SetNeedsDraw();
-            return false; // run once
+            return false;
         });
     }
 }
