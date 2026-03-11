@@ -5,12 +5,14 @@
     repo: "{{ repo_url }}"
     dest: "{{ app_dir }}"
     version: master
+  notify: restart-app
 
 - name: Build trapped-mind
   become_user: "{{ app_user }}"
   command: dotnet build
   args:
     chdir: "{{ app_dir }}"
+  notify: restart-app
 
 - name: Deploy bash_profile for auto-launch on tty1
   become_user: "{{ app_user }}"
@@ -18,3 +20,4 @@
     src: bash_profile.j2
     dest: "/home/{{ app_user }}/.bash_profile"
     mode: "0644"
+  notify: restart-app
